@@ -123,6 +123,10 @@ MAX_REQUEST_SIZE = 10 * 1024 * 1024
 API_VERSION = '1'
 
 
+# Function to be called when a request finishes.
+end_request_hook = None
+
+
 class Error(Exception):
   """Base-class for exceptions in this module."""
 
@@ -2012,6 +2016,8 @@ class CGIDispatcher(URLDispatcher):
                      self._module_dict)
       handler.AddDebuggingConsole(relative_url, env, outfile)
     finally:
+      if end_request_hook:
+        end_request_hook()
       logging.root.level = before_level
       logging.getLogger().removeHandler(handler)
 
@@ -3003,6 +3009,7 @@ def SetupStubs(app_id, **config):
 
   Keywords:
     login_url: Relative URL which should be used for handling user login/logout.
+    bdbdatastore: Use BDBDatastore as the datastore on the specified host.
     datastore_path: Path to the file to store Datastore file stub data in.
     history_path: Path to the file to store Datastore history in.
     clear_datastore: If the datastore and history should be cleared on startup.
@@ -3015,6 +3022,8 @@ def SetupStubs(app_id, **config):
     remove: Used for dependency injection.
   """
   login_url = config['login_url']
+  bdbdatastore = config.get('bdbdatastore', None)
+  bdbdatastore_port = config.get('bdbdatastore_port', 9123)
   datastore_path = config['datastore_path']
   history_path = config['history_path']
   clear_datastore = config['clear_datastore']
@@ -3040,8 +3049,15 @@ def SetupStubs(app_id, **config):
 
   apiproxy_stub_map.apiproxy = apiproxy_stub_map.APIProxyStubMap()
 
-  datastore = datastore_file_stub.DatastoreFileStub(
-      app_id, datastore_path, history_path, require_indexes=require_indexes)
+  if bdbdatastore:
+    from notdot.bdbdatastore import socket_apiproxy_stub
+    datastore = socket_apiproxy_stub.SocketApiProxyStub(
+        (bdbdatastore, bdbdatastore_port))
+    global end_request_hook
+    end_request_hook = datastore.closeSession
+  else:
+    datastore = datastore_file_stub.DatastoreFileStub(
+        app_id, datastore_path, history_path, require_indexes=require_indexes)
   apiproxy_stub_map.apiproxy.RegisterStub('datastore_v3', datastore)
 
   fixed_login_url = '%s?%s=%%s' % (login_url,

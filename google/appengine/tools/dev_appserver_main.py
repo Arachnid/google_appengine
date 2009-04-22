@@ -24,6 +24,9 @@ Must contain a valid app.yaml or app.yml file.
 Options:
   --help, -h                 View this helpful message.
   --debug, -d                Use debug logging. (Default false)
+  --bdbdatastore=HOST        Use BDBDatastore as the datastore, on the
+                             specified host.
+  --bdbdatastore_port=NUM    Alternate port number for BDBDatastore.
   --clear_datastore, -c      Clear the Datastore on startup. (Default false)
   --address=ADDRESS, -a ADDRESS
                              Address to which this server should bind. (Default
@@ -93,6 +96,8 @@ ARG_ADDRESS = 'address'
 ARG_ADMIN_CONSOLE_SERVER = 'admin_console_server'
 ARG_ADMIN_CONSOLE_HOST = 'admin_console_host'
 ARG_AUTH_DOMAIN = 'auth_domain'
+ARG_BDBDATASTORE = 'bdbdatastore'
+ARG_BDBDATASTORE_PORT = 'bdbdatastore_port'
 ARG_CLEAR_DATASTORE = 'clear_datastore'
 ARG_DATASTORE_PATH = 'datastore_path'
 ARG_DEBUG_IMPORTS = 'debug_imports'
@@ -251,6 +256,8 @@ def ParseArguments(argv):
         'admin_console_host=',
         'allow_skipped_files',
         'auth_domain=',
+        'bdbdatastore=',
+        'bdbdatastore_port=',
         'clear_datastore',
         'datastore_path=',
         'debug',
@@ -347,6 +354,12 @@ def ParseArguments(argv):
 
     if option == '--disable_static_caching':
       option_dict[ARG_STATIC_CACHING] = False
+      
+    if option == '--bdbdatastore':
+      option_dict[ARG_BDBDATASTORE] = value
+
+    if option == '--bdbdatastore_port':
+      option_dict[ARG_BDBDATASTORE_PORT] = int(value)
 
   return args, option_dict
 
