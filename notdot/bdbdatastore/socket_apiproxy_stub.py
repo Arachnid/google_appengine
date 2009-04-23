@@ -2,7 +2,9 @@ import rpc_pb2
 import socket
 import struct
 
+from google.appengine.datastore import datastore_pb
 from google.appengine.runtime import apiproxy_errors
+
 
 MAX_REQUEST_SIZE = 1 << 20
 
@@ -61,12 +63,24 @@ class SocketApiProxyStub(object):
     self._sock.close()
     self._sock = None
 
+  def _recvAll(self, size):
+    # We should use buffers here, but can't in the dev_appserver.
+    data = []
+    data_size = 0
+    while data_size < size:
+      d = self._sock.recv(size)
+      if len(d) == 0:
+        raise socket.error()
+      data.append(d)
+      data_size += len(d)
+    return ''.join(data)
+
   def _writePB(self, pb):
     self._sock.sendall(struct.pack("!i", pb.ByteSize()) + pb.SerializeToString())
 
   def _readPB(self, pb):
-    size = struct.unpack("!i", self._sock.recv(4, socket.MSG_WAITALL))[0]
-    data = self._sock.recv(size, socket.MSG_WAITALL)
+    size = struct.unpack("!i", self._recvAll(4))[0]
+    data = self._recvAll(size)
     pb.MergeFromString(data)
     return pb
 
@@ -103,3 +117,22 @@ class SocketApiProxyStub(object):
       self._sock.connect(self._endpoint)
     
     self._sendRPC(service, call, request, response)
+
+
+class RecordingSocketApiProxyStub(SocketApiProxyStub):
+  def __init__(self, endpoint, max_request_size=MAX_REQUEST_SIZE):
+    super(RecordingSocketApiProxyStub, self).__init__(
+        endpoint, max_request_size)
+    self.__query_history = {}
+
+  def MakeSyncCall(self, service, call, request, response):
+    if service == 'datastore_v3' and call == 'RunQuery':
+      clone = datastore_pb.Query()
+      clone.CopyFrom(request)
+      clone.clear_hint()
+      self.__query_history[clone] = self.__query_history.get(clone, 0) + 1
+    super(RecordingSocketApiProxyStub, self).MakeSyncCall(
+        service, call, request, response)
+  
+  def QueryHistory(self):
+    return dict((pb, times) for pb, times in self.__query_history.items())

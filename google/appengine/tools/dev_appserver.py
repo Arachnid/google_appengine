@@ -3051,7 +3051,7 @@ def SetupStubs(app_id, **config):
 
   if bdbdatastore:
     from notdot.bdbdatastore import socket_apiproxy_stub
-    datastore = socket_apiproxy_stub.SocketApiProxyStub(
+    datastore = socket_apiproxy_stub.RecordingSocketApiProxyStub(
         (bdbdatastore, bdbdatastore_port))
     global end_request_hook
     end_request_hook = datastore.closeSession
