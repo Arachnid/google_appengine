@@ -1182,6 +1182,7 @@ class HardenedModulesHook(object):
     'timing',
     'unicodedata',
     'zlib',
+    '_ast',
     '_bisect',
     '_codecs',
     '_codecs_cn',
@@ -3245,6 +3246,7 @@ def SetupStubs(app_id, **config):
   apiproxy_stub_map.apiproxy.RegisterStub(
     'capability_service',
     capability_stub.CapabilityServiceStub())
+
 
   try:
     from google.appengine.api.images import images_stub
